@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>GR</title>
+  <link rel="stylesheet" href="../common_resource/css/font-awesome.min.css">
+  <link rel="stylesheet" href="style.css">  
+</head>
+<body>
+  <aside>
+    <logo style="-webkit-app-region: drag">GR</logo>
+    <div><button fn="fetch_camera_info"><i class="fa fa-camera"></i> &nbsp;刷新相机信息</button></div>
+    <camera-info>      
+    </camera-info>
+  </aside>
+  <main>
+    <nav style="-webkit-app-region: drag">
+      <check style="-webkit-app-region: no-drag" check="none" fn="select"><check-icon></check-icon>全选</check>
+      <button style="-webkit-app-region: no-drag" disable fn="download"><i class="fa fa-download"></i> &nbsp;下 载</button>
+      <button style="-webkit-app-region: no-drag" disable fn="preview"><i class="fa fa-eye"></i> &nbsp;预 览</button>
+      <button style="-webkit-app-region: no-drag" fn="refresh"><i class="fa fa-refresh"></i> &nbsp;刷 新</button>
+      <drag style="-webkit-app-region: no-drag" fn="scale"><drag-icon></drag-icon><point></point></drag>
+    </nav>
+    <photos></photos>
+  </main>
+  
+  <script type="template" template="camera-info">
+    <ol>
+      <li><label-s>型号</label-s>${model}</li>
+      <li><label-s>固件</label-s>${firmwareVersion}</li>
+      <li><label-s>序列号</label-s>${serialNo}</li>
+      <li><label-s>mac</label-s>${macAddress}</li>
+      <li><hr></li>
+      <li><label-l>剩余电量</label-l>${battery}%</li>
+      <li><label-l>剩余张数</label-l>${remain}</li>
+    </ol>
+  </script>
+  <script src="script.js"></script>  
+</body>
+</html>

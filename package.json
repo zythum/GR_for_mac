@@ -1,0 +1,10 @@
+{
+  "name": "GR",
+  "version": "0.0.1",
+  "main": "main.js",
+  "dependencies": {
+    "request": "2.67.0"
+  },
+  "engines" : { "node" : "4.1.1" },
+  "os" : [ "darwin" ]
+}
