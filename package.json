@@ -1,9 +1,13 @@
 {
-  "name": "GR",
+  "name": "GR_for_mac",
   "version": "0.0.1",
   "main": "main.js",
   "dependencies": {
-    "request": "2.67.0"
+    "electron-packager": "5.2.0",
+    "electron-builder": "2.5.0"
+  },
+  "scripts": {
+    "start": "electron ."
   },
   "engines" : { "node" : "4.1.1" },
   "os" : [ "darwin" ]

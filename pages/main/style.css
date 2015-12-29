@@ -31,8 +31,8 @@ button {
   line-height: 18px;
   border: none;
   border-radius: 2px;
-  background: linear-gradient(rgba(50, 50, 50, 1.0), rgba(30, 30, 30, 1.0));
-  box-shadow: 0 0 2px 1px rgba(0, 0, 0, 0.4);
+  background: linear-gradient(rgba(50, 50, 50, 1.0), rgba(40, 40, 40, 1.0));
+  box-shadow: 0 0 2px 1px rgba(0, 0, 0, 0.2);
   position: relative;
   margin-top: 2px;
   color: rgb(192, 192, 192);
@@ -42,9 +42,8 @@ button {
 button:active {
   background: linear-gradient(rgba(30, 30, 30, 1.0), rgba(20, 20, 20, 1.0));
   color: rgb(120, 120, 120);
-  box-shadow: 0 0 3px 1px rgba(0, 0, 0, 0.8) inset;
+  box-shadow: 0 0 3px 1px rgba(0, 0, 0, 0.6) inset;
 }
-
 button[disable] {
   background: linear-gradient(rgba(30, 30, 30, 1.0), rgba(28, 28, 28, 1.0));
   color: rgb(90, 90, 90);
@@ -53,7 +52,10 @@ button[disable] {
 button[disable]:active {
   background-image: linear-gradient(rgba(30, 30, 30, 1.0), rgba(28, 28, 28, 1.0));
   color: rgb(90, 90, 90);
-  box-shadow: 0 0 2px 1px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 0 2px 1px rgba(0, 0, 0, 0.2);
+}
+button .fa {
+  margin-right: 10px;
 }
 
 /*左侧*/
@@ -68,6 +70,7 @@ aside logo {
   color: rgb(163, 163, 163);
   font-size: 64px;
   padding-top: 6px;
+  -webkit-app-region: drag;
 }
 aside ol {
   color: rgb(163, 163, 163);
@@ -121,7 +124,12 @@ nav {
   font-size: 12px;
   padding: 20px 0 0 5px;
   box-shadow: 2px 0 0 1px rgba(0, 0, 0, 0.3);
+  -webkit-app-region: drag;
 }
+nav * {
+  -webkit-app-region: no-drag;
+}
+
 nav check, nav button, nav drag {
   margin-right: 20px;
 }
@@ -130,6 +138,7 @@ check {
   height: 26px;
   line-height: 26px;
   letter-spacing: 3px;
+  color: rgb(192, 192, 192);
 }
 check check-icon {
   display: block;
@@ -257,20 +266,16 @@ photos {
   height: 100%;
   overflow: auto;
   padding-top: 60px;
-  padding-left:5px;
+  padding-left: 5px;
 }
 photos section {
   display: flex;
   flex-flow: row wrap;
-  padding-top: 50px;
+  padding-top: 40px;
   width: 100%;
   position: relative;
   padding-bottom: 20px;
 }
-photos section.cur {
-  position: static;
-}
-
 photos section::before {
   content: attr(desc);
   position: absolute;
@@ -280,8 +285,8 @@ photos section::before {
   height: 40px;
   line-height: 40px;
   color: rgba(93, 93, 93, 1.0);
+  font-weight: bold;
 }
-
 photos section item {
   width: 100px;
   height: 100px;
@@ -315,7 +320,7 @@ photos section item img {
 }
 photos section item i.fa {
   font-size: 20px;
-  color : rgb(43, 43, 43)
+  color: rgb(43, 43, 43)
 }
 photos section item[orientation="portrait"] img {
   width: 100%;
@@ -336,7 +341,6 @@ photos section item[orientation="landscape"] img {
 photos section item[loading] img {
   visibility: hidden;
 }
-
 photos section item::after {
   content: "";  
   position: absolute;
@@ -345,11 +349,11 @@ photos section item::after {
   left: 0;
   right: 0;
   bottom: 0;
-  border: 0px solid rgba(163, 163, 163, 1.0);
   border-radius: 6px;
 }
-photos section item[select]::after {
-  border-width: 2px;
+photos section item[select] {
+  border: 1px solid rgba(0, 0, 0, 0);
+  box-shadow: 0 0 0 3px rgba(163, 163, 163, 1.0);
 }
 photos section item[type]::before {
   content: attr(type);
@@ -365,3 +369,129 @@ photos section item[type]::before {
   border-radius: 2px;
   font-weight: bold;
 }
+
+preview {
+  position: fixed;
+  flex-direction: row;
+  top: 0;
+  left: 200px;
+  bottom: 0;
+  right: 0;
+  padding-top: 60px;
+  padding-left: 5px;
+  z-index: 100;
+  background: rgba(27, 27, 27, 1.0);
+  display: none;
+}
+body[preview] preview {
+  display: flex;
+}
+preview preview-title {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  z-index: 5;
+  background: rgba(27, 27, 27, 1.0);
+  color: rgb(93, 93, 93);
+  font-size: 12px;
+  padding: 20px 0 0 5px;
+  box-shadow: 2px 0 0 1px rgba(0, 0, 0, 0.3);
+  -webkit-app-region: drag;
+}
+preview preview-title button {
+  -webkit-app-region: no-drag;
+}
+preview preview-title preview-title-left {
+  display: block;
+  height: 100%;
+  float: left;
+  margin-left: 5px;
+}
+preview preview-title preview-title-right {
+  display: block;
+  height: 100%;
+  float: right;
+  margin-right: 111px;
+}
+preview preview-title preview-title-right button {
+  margin-right: 10px;
+}
+preview preview-title preview-title-text {
+  display: block;
+  height: 100%;
+  line-height: 40px;
+  font-size: 20px;
+  margin-top: -8px;
+  margin-left: 100px;
+  margin-right: 300px;
+}
+
+preview preview-content {
+  height: 100%;
+  flex: 1;
+  display: block;
+  overflow: auto;
+}
+preview preview-content-photo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center center;
+  transform: translateZ(0);
+}
+preview preview-info {
+  height: 100%;
+  width: 0;
+  transition: width 0.2s ease;
+}
+preview[show-info] preview-info {
+  width: 200px;
+  border-left: 1px solid rgba(0, 0, 0, 0.3);
+}
+preview preview-info {
+  overflow:hidden;
+}
+preview preview-info ol {
+  width: 200px;
+  color: rgb(163, 163, 163);
+  padding: 40px 20px 0 20px;
+  font-size: 12px;
+}
+preview preview-info ol li {
+  margin-bottom: 14px;
+  -webkit-user-select: auto;
+  cursor: text;
+}
+preview preview-info div {
+  text-align: center;
+  margin-bottom: 23px;
+}
+preview preview-info ol li hr {
+  border: none;
+  border-top: 1px solid rgba(163, 163, 163, 0.1);
+  width: 100%;
+  height: 0;
+  box-shadow: none;
+}
+preview preview-info ol label {
+  float: left;
+  text-align: center;
+  background: rgb(163, 163, 163);
+  color: rgb(27, 27, 27);
+  border-radius: 3px;
+  padding: 0 4px;
+  margin-right: 10px;
+  font-weight: bold;
+}
+preview preview-info ol label {
+  width: 45px;
+}
+
+

@@ -8,11 +8,14 @@ const ipcRenderer = require('electron').ipcRenderer
 
 let nodes = {};
 [
-  "camera-info", "photos",
+  "camera-info", "photos", 
+  "preview", "preview-info", "preview-content", "preview-content-photo",
   "[fn=select]", "[fn=download]",
-  "[fn=preview]", "[fn=scale]",
-  "[fn=refresh]",
-  "[fn=fetch_camera_info]"
+  "[fn=preview]", "[fn=scale]", "[fn=refresh]",
+  "[fn=fetch_camera_info]",
+  "[fn=preview_download]",
+  "[fn=preview_back]",
+  "[fn=preview_info]"
 ].forEach( (query) => {
   nodes[query] = document.querySelector(query)
 })
@@ -51,6 +54,11 @@ function photo_orientation_onload () {
     this.parentNode.removeChild(this.nextSibling)
   }, 500)
 }
+
+//防止页面被pinch放大 略黑科技
+document.addEventListener('mousewheel', (e) => {
+  if (e.ctrlKey) e.preventDefault()
+})
 
 //缩放=======================================================
 let dragContainer = nodes["[fn=scale]"]
@@ -116,7 +124,7 @@ function downloadSelected () {
 }
 
 function previewSelected () {
-  alert("previewSelected")
+  startPreview( lastSelectItem() )
 }
 
 function updateNavButtonStates () {
@@ -150,9 +158,18 @@ function updateNavButtonStates () {
   }, 0);
 }
 
+function lastSelectItem () {
+  return selectedItems().reduce((prev, item) => {
+    if (!prev) return item
+    let prevIndex = parseInt( prev.getAttribute(kSelectCountIndexAttributeName) )
+    let itemIndex = parseInt( item.getAttribute(kSelectCountIndexAttributeName) )
+    return itemIndex > prevIndex ? item : prev
+  }, null)
+}
+
 function cancelAllSelect () {
   selectedItems().forEach(function (item) {
-    item.removeAttribute(kSelectAttributeName)
+    cancelSelectItem(item)
   })
   updateNavButtonStates()
 }
@@ -163,9 +180,12 @@ function selectAll () {
   updateNavButtonStates()
 }
 
-function selectItem (item) {
+function selectItem (item, needCountIndex) {
+  if (arguments.length < 2) needCountIndex = true //needCountIndex缺损是true
   item.setAttribute(kSelectAttributeName, "")
-  item.setAttribute(kSelectCountIndexAttributeName, ++selectCountIndex)
+  if (needCountIndex) {
+    item.setAttribute(kSelectCountIndexAttributeName, ++selectCountIndex)
+  }
   updateNavButtonStates()
 }
 function cancelSelectItem (item) {
@@ -182,22 +202,14 @@ function toggleSelectItem (item) {
   }
 }
 
-nodes["photos"].addEventListener("mousedown", (e) => {
+function mousedownInPhoto (e) {
   let targetIsNotItem = e.target.tagName.toLowerCase() != itemTagName
   if (e.button == 0) { //鼠标左键
     if (e.shiftKey) {  //按cmd键
       if (targetIsNotItem) return
       if (e.target.hasAttribute(kSelectAttributeName)) return
-
-      let lastSelectItem = selectedItems().reduce((prev, item) => {
-        if (!prev) return item
-        let prevIndex = parseInt( prev.getAttribute(kSelectCountIndexAttributeName) )
-        let itemIndex = parseInt( item.getAttribute(kSelectCountIndexAttributeName) )
-        return itemIndex > prevIndex ? item : prev
-      }, null)
-
       let _items = items()
-      let range = [_items.indexOf(lastSelectItem), _items.indexOf(e.target)].sort((a, b) => a - b)
+      let range = [_items.indexOf(lastSelectItem()), _items.indexOf(e.target)].sort((a, b) => a - b)
       _items.slice(range[0], range[1] + 1).forEach((item) => selectItem(item))
     } else if (e.metaKey) { //按cmd键
       if (targetIsNotItem) return
@@ -209,7 +221,9 @@ nodes["photos"].addEventListener("mousedown", (e) => {
       selectItem(e.target)
     }
   }
-})
+}
+
+nodes["photos"].addEventListener("mousedown", mousedownInPhoto)
 
 //鼠标左键
 nodes["photos"].addEventListener("contextmenu", (e) => {
@@ -410,3 +424,248 @@ fetchCameraInfo()
 
 nodes["[fn=fetch_camera_info]"].addEventListener("click", fetchCameraInfo)
 nodes["[fn=refresh]"].addEventListener("click", fetchPhotos)
+
+
+//预览==============================================================
+const kPreviewingBodyAttributeName = "preview"
+const kPreviewShowInfoAttributeName = "show-info"
+let previewingItem = null
+function startPreview (item) {
+  if (!item) return cancelPreview()
+  document.body.setAttribute(kPreviewingBodyAttributeName, "")
+  previewingItem = item  
+  nodes["preview-info"].innerHTML = template("preview-info", {
+    file: previewingItem.info.file,
+    dir: previewingItem.info.dir,
+    date: previewingItem.info.datetime.split("T")[0],
+    time: previewingItem.info.datetime.split("T")[1],
+    aspectRatio: previewingItem.info.aspectRatio,
+    av: previewingItem.info.av,
+    tv: previewingItem.info.tv.replace(".", "/"),
+    sv: previewingItem.info.sv
+  })
+  nodes["preview-content-photo"].style.cssText = 
+  `background-image: url(${previewingItem.info.source}?size=view)`
+}
+
+function cancelPreview () {
+  document.body.removeAttribute(kPreviewingBodyAttributeName)
+  previewingItem = null
+  nodes["preview-content"].firstChild.src = null
+}
+
+nodes["[fn=preview]"].addEventListener("click", (e) => {
+  if (!nodes["[fn=preview]"].hasAttribute("disable")) {
+    startPreview( lastSelectItem() )
+  }
+})
+nodes["[fn=preview_back]"].addEventListener("click", cancelPreview)
+nodes["[fn=preview_info]"].addEventListener("click", (e) => {
+  if (nodes["preview"].hasAttribute(kPreviewShowInfoAttributeName)) {
+    nodes["preview"].removeAttribute(kPreviewShowInfoAttributeName)
+  } else {
+    nodes["preview"].setAttribute(kPreviewShowInfoAttributeName, "")
+  }
+})
+
+document.addEventListener('mousewheel', (e) => {
+  let photo = nodes["preview-content-photo"]
+  let container = nodes["preview-content"]
+  if ( e.target === photo && 
+    e.ctrlKey && e.deltaY % 1 !== 0 ) {
+
+    let scale = photo.scale || 1
+    let baseWidth = container.offsetWidth
+    let baseHeight = container.offsetHeight
+
+    let photoHeight = baseHeight * scale    
+    let difference = (photoHeight - e.deltaY * 10) / photoHeight
+
+    let newScale = scale * difference
+
+    if (newScale < 1) newScale = 1, difference = 1
+    if (newScale > 3) newScale = 3, difference = 1
+
+    let mouseToPhotoDistanceLeft = e.clientX - photo.getBoundingClientRect().left
+    let mouseToPhotoDistanceTop = e.clientY - photo.getBoundingClientRect().top
+
+    let newMouseToPhotoDistanceLeft = mouseToPhotoDistanceLeft * difference
+    let newMouseToPhotoDistanceTop = mouseToPhotoDistanceTop * difference
+
+    let scrollFixLeft = newMouseToPhotoDistanceLeft - mouseToPhotoDistanceLeft
+    let scrollFixTop = newMouseToPhotoDistanceTop - mouseToPhotoDistanceTop
+
+    photo.style.width = photo.style.height = newScale * 100 + "%"
+    container.scrollLeft += Math.round(scrollFixLeft)
+    container.scrollTop += Math.round(scrollFixTop)
+    
+    photo.scale = newScale
+  }
+})
+
+//键盘快捷键
+function scrollItemIntoView (item) {
+  let bounding = item.getBoundingClientRect()
+  if (bounding.top < 60) {
+    nodes["photos"].scrollTop = bounding.top - nodes["photos"].firstChild.getBoundingClientRect().top - 10
+  } else if (bounding.bottom > nodes["photos"].offsetHeight) {
+    nodes["photos"].scrollTop = bounding.bottom - nodes["photos"].firstChild.getBoundingClientRect().top - nodes["photos"].offsetHeight + 70
+  }
+}
+function parseGrid (section) {
+  let firstItem = section.firstChild
+  let itemWidth = firstItem.offsetWidth + parseInt(document.defaultView.getComputedStyle(firstItem).marginRight)
+  let cols = parseInt(section.offsetWidth / itemWidth)
+  let rows = parseInt(section.childNodes.length / cols) + 1
+  return {
+    colLength () { return cols },
+    rowLength () { return rows },
+    itemFromPos (row, col) {
+      if (col >= cols) return null
+      return section.childNodes[cols * row + col]
+    },
+    posFromItem (item) {
+      let childNodes = slice.call(section.childNodes)
+      let index = childNodes.indexOf(item)
+      let row = -1, col = -1
+      if (index != -1) {
+        row = parseInt(index / cols)
+        col = index % cols
+      }
+      return [row, col]
+    }
+  }
+}
+
+function keyDownInPhotoKeyLeft () {
+  let _lastSelectItem = lastSelectItem()
+  let needSelectItem
+  if (_lastSelectItem) {
+    if (_lastSelectItem.previousSibling) {
+      needSelectItem = _lastSelectItem.previousSibling
+    } else if (_lastSelectItem.parentNode.previousSibling) {
+      needSelectItem = _lastSelectItem.parentNode.previousSibling.lastChild
+    }
+  } else {
+    let _items = items()
+    needSelectItem = _items[_items.length - 1]
+  }
+  if (needSelectItem) {
+    cancelAllSelect()
+    selectItem(needSelectItem)
+    scrollItemIntoView(needSelectItem)
+  }
+}
+
+function keyDownInPhotoKeyRight () {
+  let _lastSelectItem = lastSelectItem()
+  let needSelectItem
+  if (_lastSelectItem) {
+    if (_lastSelectItem.nextSibling) {
+      needSelectItem = _lastSelectItem.nextSibling
+    } else if (_lastSelectItem.parentNode.nextSibling) {
+      needSelectItem = _lastSelectItem.parentNode.nextSibling.firstChild
+    }
+  } else {
+    needSelectItem = items()[0]
+  }
+  if (needSelectItem) {
+    cancelAllSelect()
+    selectItem(needSelectItem)
+    scrollItemIntoView(needSelectItem)
+  }
+}
+
+function keyDownInPhotoKeyUp () {
+  let _lastSelectItem = lastSelectItem()
+  let needSelectItem
+  if (_lastSelectItem) {
+    let section = _lastSelectItem.parentNode
+    let grid = parseGrid(section)
+    let _lastSelectItemPos = grid.posFromItem(_lastSelectItem)
+    needSelectItem = grid.itemFromPos(_lastSelectItemPos[0] - 1, _lastSelectItemPos[1])
+    if ( !needSelectItem && (section = section.previousSibling) ) {
+      grid = parseGrid(section)
+      let rowIndex = grid.rowLength()
+      needSelectItem = grid.itemFromPos(rowIndex - 1, _lastSelectItemPos[1])
+      if (!needSelectItem) needSelectItem = section.lastChild
+    }
+  } else {
+    let _items = items()
+    needSelectItem = _items[_items.length - 1]
+  }
+  if (needSelectItem) {
+    cancelAllSelect()
+    selectItem(needSelectItem)
+    scrollItemIntoView(needSelectItem)
+  }
+}
+
+function keyDownInPhotoKeyDown () {
+  let _lastSelectItem = lastSelectItem()
+  let needSelectItem
+  if (_lastSelectItem) {
+    let section = _lastSelectItem.parentNode
+    let grid = parseGrid(section)
+    let _lastSelectItemPos = grid.posFromItem(_lastSelectItem)
+    let rowIndex = _lastSelectItemPos[0] + 1
+    needSelectItem = grid.itemFromPos(rowIndex, _lastSelectItemPos[1])
+    if ( !needSelectItem && rowIndex == grid.rowLength() - 1 ) {
+      needSelectItem = section.lastChild 
+    }
+    if ( !needSelectItem && (section = section.nextSibling) ) {
+      grid = parseGrid(section)
+      let rowIndex = grid.rowLength()
+      needSelectItem = grid.itemFromPos(0, _lastSelectItemPos[1])
+      if (!needSelectItem) needSelectItem = section.lastChild
+    }
+  } else {
+    needSelectItem = items()[0]
+  }
+  if (needSelectItem) {
+    cancelAllSelect()
+    selectItem(needSelectItem)
+    scrollItemIntoView(needSelectItem)
+  }
+}
+let isShiftKeyPressing = false
+let shiftKeyPressing
+function keyDownInPhotoKeyShift () {
+  isShiftKeyPressing = true
+}
+function keyUpInPhotoKeyShift () {
+  isShiftKeyPressing = false
+}
+
+function activeElementIsInput () {
+  let focusElement = document.activeElement
+  return (
+    focusElement.tagName.toLowerCase === 'textarea' ||
+    focusElement.tagName.toLowerCase === 'input' ||
+    focusElement.getAttribute("contenteditable") === "true"
+  )
+}
+let keyDownInPhotoMap = {
+  37: keyDownInPhotoKeyLeft,
+  38: keyDownInPhotoKeyUp,
+  39: keyDownInPhotoKeyRight,
+  40: keyDownInPhotoKeyDown
+}
+function keyDownInPhoto (e) {
+  let keyDownInPhotoFn = keyDownInPhotoMap[e.keyCode]
+  if (!activeElementIsInput() && keyDownInPhotoFn) {
+    e.preventDefault()
+    keyDownInPhotoFn() 
+  }
+}
+document.documentElement.addEventListener("keydown", (e) => e.keyCode === 16 && keyDownInPhotoKeyShift() )
+document.documentElement.addEventListener("keyup", (e) => e.keyCode === 16 && keyUpInPhotoKeyShift() )
+document.documentElement.addEventListener("keydown", (e) => {
+  if (document.body.hasAttribute(kPreviewingBodyAttributeName)) {
+
+  } else {
+    keyDownInPhoto(e)
+  }
+})
+
+

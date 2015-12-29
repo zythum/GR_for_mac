@@ -10,7 +10,13 @@ const dialog = require('electron').dialog;
 const app = electron.app
 const BrowserWindow = electron.BrowserWindow
 
-const mainWindowConfig = {width: 1200, height: 600, "title-bar-style": "hidden"}
+const mainWindowConfig = {
+  width: 1200,
+  height: 600,
+  minWidth: 850,
+  minHeight: 500,
+  "title-bar-style": "hidden"
+}
 const mainWindowHtmlPath = `file://${__dirname}/pages/main/index.html`
 
 let mainWindow = null
@@ -63,8 +69,7 @@ function startDownLoad () {
     let filePath = dir + '/' + fileName(source, dir)
     let fileLoadingPath = filePath + '.download'
     let file = fs.createWriteStream(fileLoadingPath)
-    
-    res.pipe(file)    
+    res.pipe(file)
     res.on("end", () => {
       fs.renameSync(fileLoadingPath, filePath)
       nowDownloading = undefined
